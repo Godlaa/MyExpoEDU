@@ -1,10 +1,11 @@
-import Map from "@/components/Map";
+import MarkerList from "@/components/MarkerList";
+import { MarkerType } from "@/types";
 import { StyleSheet, View } from "react-native";
 
-export default function RootMap() {
+export default function Markers() {
   return (
     <View style={styles.container} >
-      <Map />
+      <MarkerList />
     </View>
   );
 }
