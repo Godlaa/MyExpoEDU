@@ -1,20 +1,33 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, Image, StyleSheet, Text, Alert, View, TouchableOpacity } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
-import { ImageListTypeUrl, ImageType, MarkerTypeUrl } from '@/types';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import { FlatList, GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Crypto from 'expo-crypto';
+import { useDatabase } from "@/contexts/DatabaseContext";
+import { MarkerImages } from '@/types';
 
-export default function ImageList() {
-  // const { images } = useLocalSearchParams<ImageListTypeUrl>();
-  const [imagesArray, setImages] = useState<ImageType[]>([]);
+type Props = {
+  markerId: number;
+}
+
+export default function ImageList({ markerId }: Props) {
+  const [imagesArray, setImages] = useState<MarkerImages[]>([]);
   const [status, requestPermission] = MediaLibrary.usePermissions();
+  const { getMarkerImages, addImage } = useDatabase();
 
   if (status === null) {
     requestPermission();
   }
+
+  useEffect(() => {
+    const fetchImages = async (id: number) => {
+      const images = await getMarkerImages(id);
+      setImages(images);
+    };
+
+    fetchImages(markerId);
+  }, [markerId]);
 
   const pickImageAsync = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -24,7 +37,12 @@ export default function ImageList() {
     });
 
     if (!result.canceled) {
-      setImages(prev => [...prev, {id: Crypto.randomUUID() as string, uri: result.assets[0].uri}]);
+      setImages(prev => [
+        ...prev,
+        { id: Date.now(), uri: result.assets[0].uri, markerId: markerId },
+      ]);
+
+      addImage(markerId, result.assets[0].uri);
     } else {
       alert('You did not select any image.');
     }
@@ -41,7 +59,7 @@ export default function ImageList() {
     );
   };
 
-  const renderImageItem = (uri : string) => (
+  const renderImageItem = (uri: string) => (
     <View style={styles.item}>
       <Image source={{ uri }} style={styles.itemPhoto} resizeMode="cover" />
       <TouchableOpacity style={styles.deleteButton} onPress={() => deleteImage(uri)}>
@@ -54,10 +72,10 @@ export default function ImageList() {
     <GestureHandlerRootView style={styles.container}>
       <View>
         {imagesArray.length > 0 ? (
-          <FlatList<ImageType>
+          <FlatList<MarkerImages>
             data={imagesArray}
             renderItem={({ item }) => renderImageItem(item.uri)}
-            keyExtractor={({ id }) => id}
+            keyExtractor={({ id }) => id.toString()}
             horizontal
             showsHorizontalScrollIndicator={false}
           />
@@ -83,7 +101,7 @@ const styles = StyleSheet.create({
   itemPhoto: {
     width: 200,
     height: 200,
-    borderRadius: 8
+    borderRadius: 8,
   },
   deleteButton: {
     position: 'absolute',
@@ -92,26 +110,26 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,0,0,0.7)',
     paddingHorizontal: 5,
     paddingVertical: 2,
-    borderRadius: 5
+    borderRadius: 5,
   },
   deleteButtonText: {
     color: '#fff',
-    fontSize: 12
+    fontSize: 12,
   },
   addButton: {
     marginTop: 20,
     backgroundColor: '#afd33d',
     padding: 15,
     borderRadius: 8,
-    alignItems: 'center'
+    alignItems: 'center',
   },
   addButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold'
+    fontWeight: 'bold',
   },
   noImagesText: {
     fontStyle: 'italic',
-    color: 'gray'
-  }
+    color: 'gray',
+  },
 });

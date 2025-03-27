@@ -3,17 +3,31 @@ import { ActivityIndicator, Alert, StyleSheet, Text, Touchable, TouchableOpacity
 import { DEFAULT_REGION } from '@/consts';
 import { useEffect, useRef, useState } from 'react';
 import * as Location from 'expo-location';
+import * as Notifications from 'expo-notifications';
 import * as Crypto from 'expo-crypto';
 import { useRouter } from 'expo-router';
-import { ImageType, MarkerType } from '@/types';
+import { MarkerType } from '@/types';
+import { useDatabase } from "@/contexts/DatabaseContext";
+import { NotificationManager } from '@/services/notifications';
+import { calculateDistance } from '@/services/locations';
+
+const PROXIMITY_THRESHOLD = 100;
 
 export default function Map() {
 
-  const mapRef = useRef<MapView | null>(null);
   const router = useRouter();
   const [markers, setMarkers] = useState<MarkerType[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const { addMarker, getMarkers, deleteAllMarkers, isLoading } = useDatabase();
+  const mapRef = useRef<MapView | null>(null);
+  const markersRef = useRef<MarkerType[]>(markers);
+
+  useEffect(() => {
+    markersRef.current = markers;
+  }, [markers]);
+
+  const notificationManager = useRef(new NotificationManager());
 
   const showError = (message: string) => {
     setError(message);
@@ -25,11 +39,9 @@ export default function Map() {
       pathname: "/marker/[marker]",
       params: {
         marker: marker.id,
-        title: marker.title,
-        description: marker.description,
         latitude: marker.latitude.toString(),
         longitude: marker.longitude.toString(),
-        images: JSON.stringify(marker.images),
+        title: marker.title,
       },
     });
   };
@@ -52,18 +64,41 @@ export default function Map() {
     }
   };
 
-  const addNewMarker = (event: any) => {
-    const coordinates = event.nativeEvent.coordinate;
-    const newMarker: MarkerType = {
-      id: Crypto.randomUUID() as string,
-      latitude: coordinates.latitude,
-      longitude: coordinates.longitude,
-      title: "Новая метка",
-      description: "Описание новой метки",
-      images: new Array<ImageType>({id: Crypto.randomUUID() as string, uri: "https://example.com/image.jpg"}),
-    };
+  const addNewMarker = async (event: any) => {
+    try {
+      const coordinates = event.nativeEvent.coordinate;
+      const newMarkerName = `Метка ${coordinates.latitude.toFixed(2)}, ${coordinates.longitude.toFixed(2)}`;
+      const newMarkerId = await addMarker(coordinates.latitude, coordinates.longitude, newMarkerName);
+      const newMarker: MarkerType = {
+        id: newMarkerId,
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude,
+        title: newMarkerName,
+      };
+      setMarkers([...markers, newMarker]);
+    } catch (e) {
+      showError("Не удалось добавить новую метку.");
+    }
+  };
 
-    setMarkers([...markers, newMarker]);
+  const loadMarkers = async () => {
+    try {
+      setLoading(true);
+      const dbMarkers = await getMarkers();
+      const formattedMarkers: MarkerType[] = dbMarkers.map(marker => ({
+        id: marker.id,
+        latitude: marker.latitude,
+        longitude: marker.longitude,
+        title: marker.title,
+      }));
+      console.log(formattedMarkers);
+      setMarkers(formattedMarkers);
+    } catch (err) {
+      showError("Не удалось загрузить маркеры");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -72,10 +107,81 @@ export default function Map() {
       if (status !== 'granted') {
         showError("Нет доступа к локации.");
       }
+      await loadMarkers();
     })();
   }, []);
 
+  useEffect(() => {
+    const requestNotificationPermission = async () => {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      
+      if (finalStatus !== 'granted') {
+        alert('Не удалось получить разрешение на уведомления!');
+        return;
+      }
+      
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: false,
+        }),
+      });
+    };
+    
+    requestNotificationPermission();
+  }, []);
+      
+  useEffect(() => {
+    getMarkers();
+  }, [addNewMarker]);
+
+  useEffect(() => {
+    let locationSubscription: Location.LocationSubscription;
+    (async () => {
+      try {
+        locationSubscription = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.Balanced,
+            timeInterval: 100,
+            distanceInterval: 5
+          },
+          (location) => {
+            markersRef.current.forEach(marker => {
+              const distance = calculateDistance(
+                location.coords.latitude,
+                location.coords.longitude,
+                marker.latitude,
+                marker.longitude
+              );
+              console.log("Расстояние:", distance);
+              if (distance <= PROXIMITY_THRESHOLD) {
+                notificationManager.current.showNotification(marker);
+              } else {
+                notificationManager.current.removeNotification(marker.id);
+              }
+            });
+          }
+        );
+      } catch (error) {
+        console.error("Ошибка отслеживания местоположения:", error);
+      }
+    })();
+    return () => {
+      if (locationSubscription) {
+        locationSubscription.remove();
+      }
+    };
+  }, []);
+
   const clearMarkers = () => {
+    deleteAllMarkers();
     setMarkers([]);
   }
 
@@ -95,15 +201,14 @@ export default function Map() {
         ref={mapRef}
         onLongPress={addNewMarker}
       >
-        {markers.map((marker, index) => (
-          <Marker
-            key={index}
-            coordinate={marker}
-            title={marker.title}
-            description={marker.description}
-            onCalloutPress={() => markerClick(marker)}
-          />
-        ))}
+      {markers.map((marker, index) => (
+        <Marker
+          key={index}
+          coordinate={marker}
+          title={marker.title}
+          onCalloutPress={() => markerClick(marker)}
+        />
+      ))}
       </MapView>
 
       {loading && (
