@@ -16,7 +16,7 @@ export class NotificationManager {
 
   async showNotification(marker: MarkerType): Promise<void> {
     if (this.activeNotifications.has(marker.id)) {
-      console.log("Notification already in active notification");
+      console.log("Уведомление уже активно для этого маркера:", marker.id);
       return;
     }
 

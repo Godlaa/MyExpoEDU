@@ -4,7 +4,7 @@ import { StyleSheet, View } from "react-native";
 
 export default function Markers() {
   return (
-    <View style={styles.container} >
+    <View style={styles.container}>
       <MarkerList />
     </View>
   );

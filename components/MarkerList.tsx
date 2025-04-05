@@ -1,11 +1,18 @@
-import React from 'react';
+import { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import ImageList from './ImageList';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { MarkerTypeUrl } from '@/types';
 
 export default function MarkerList() {
   const params = useLocalSearchParams<MarkerTypeUrl>();
+  const navigation = useNavigation();
+
+  useEffect(() => {
+    navigation.setOptions({ 
+      title: params.title || "Маркер"
+    });
+  }, [params.title]);
 
   const marker = {
     id: Number(params.marker),
@@ -16,11 +23,6 @@ export default function MarkerList() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{marker.title}</Text>
-      <Text style={styles.coordinates}>
-        Координаты: {marker.latitude.toFixed(4)}, {marker.longitude.toFixed(4)}
-      </Text>
-      <Text style={styles.subTitle}>Фотографии:</Text>
       <ImageList markerId={marker.id} />
     </View>
   );

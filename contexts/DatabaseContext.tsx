@@ -8,7 +8,7 @@ interface DatabaseContextType {
   addMarker: (latitude: number, longitude: number, title: string) => Promise<number>;
   deleteMarker: (id: number) => Promise<void>;
   getMarkers: () => Promise<MarkerType[]>;
-  addImage: (markerId: number, uri: string) => Promise<void>;
+  addImage: (markerId: number, uri: string) => Promise<number>;
   deleteImage: (id: number) => Promise<void>;
   getMarkerImages: (markerId: number) => Promise<MarkerImages[]>;
   deleteAllMarkers: () => Promise<void>;
@@ -57,7 +57,7 @@ export const DatabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
       );
       return result.lastInsertRowId;
     } catch (err) {
-      console.error("Failed to add marker:", err);
+      console.error("Ошибка добавления marker:", err);
       throw err;
     }
   };
@@ -68,7 +68,7 @@ export const DatabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
       
       return await db.getAllAsync("SELECT * FROM markers");
     } catch (err) {
-      console.error("Failed to get markers:", err);
+      console.error("Ошибка получения markers:", err);
       throw err;
     }
   };
@@ -79,23 +79,24 @@ export const DatabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
       
       await db.runAsync("DELETE FROM markers WHERE id = ?", [id]);
     } catch (err) {
-      console.error("Failed to delete marker:", err);
+      console.error("Ошибка удаления marker:", err);
       throw err;
     }
   };
 
-  const addImage = async (markerId: number, uri: string): Promise<void> => {
+  const addImage = async (markerId: number, uri: string): Promise<number> => {
     try {
       console.log(markerId);
       if (!db) throw new Error("Database not initialized");
       if (!markerId) throw new Error("Marker ID is required");
       
-      await db.runAsync(
+      const result = await db.runAsync(
         "INSERT INTO marker_images (marker_id, uri) VALUES (?, ?)",
         [markerId, uri]
       );
+      return result.lastInsertRowId
     } catch (err) {
-      console.error("Failed to add image:", err);
+      console.error("Ошибка добавления image:", err);
       throw err;
     }
   };
@@ -106,7 +107,7 @@ export const DatabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
       
       await db.runAsync("DELETE FROM marker_images WHERE id = ?", [id]);
     } catch (err) {
-      console.error("Failed to delete image:", err);
+      console.error("Ошибка удаления image:", err);
       throw err;
     }
   };
@@ -120,7 +121,7 @@ export const DatabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
         [markerId]
       );
     } catch (err) {
-      console.error("Failed to get marker images:", err);
+      console.error("Ошибка получения marker images:", err);
       throw err;
     }
   };
@@ -131,7 +132,7 @@ export const DatabaseProvider: React.FC<{ children: ReactNode }> = ({ children }
       
       await db.runAsync("DELETE FROM markers");
     } catch (err) {
-      console.error("Failed to delete all markers:", err);
+      console.error("Ошибка удаления всех markers:", err);
       throw err;
     }
   };
