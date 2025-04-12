@@ -1,50 +1,33 @@
-# Welcome to your Expo app 👋
+# MyExpoEDU 👋
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+MyExpoEDU — это мобильное приложение, для работы с картами, геолокацией, локальной базой данных (SQLite) и уведомлениями. Приложение позволяет:
+- Отображать карту с текущей локацией.
+- Добавлять маркеры на карту посредством долгого нажатия.
+- Хранить данные маркеров и связанных с ними изображений в локальной базе данных.
+- Просматривать список изображений для выбранного маркера и загружать новые из галереи.
+- Отслеживать расстояние до маркеров и получать уведомления при приближении к ним.
 
-## Get started
+## Ключевая фукнциональность
 
-1. Install dependencies
+- **Интеграция с SQLite:** Через контекст [DatabaseContext](./contexts/DatabaseContext.tsx) реализованы CRUD-операции для маркеров и изображений.
+- **Геолокация:** Используется [expo-location](https://docs.expo.dev/versions/latest/sdk/location/) для отслеживания текущей позиции.
+- **Уведомления:** Модуль [NotificationManager](./services/notifications.ts) отправляет локальные уведомления при близости к маркеру.
+- **Карты:** Использование [react-native-maps](https://github.com/react-native-maps/react-native-maps) для отображения карты и управления метками.
+
+## Как запустить проект
+
+Для отладки приложения необходимо установить приложение Expo Go на физическое устройство
+
+1. Установка зависимостей в корневой папке
 
    ```bash
    npm install
    ```
 
-2. Start the app
+2. Запуск проекта после установки зависимостей
 
    ```bash
     npx expo start
    ```
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+После запуска проекта необходимо отсканировать QR код в терминале при помощи Expo Go
